@@ -198,8 +198,12 @@ class VocosExp(pl.LightningModule):
         audio_input = batch
         audio_hat = self(audio_input, **kwargs)
 
-        audio_16_khz = torchaudio.functional.resample(audio_input, orig_freq=self.hparams.sample_rate, new_freq=16000)
-        audio_hat_16khz = torchaudio.functional.resample(audio_hat, orig_freq=self.hparams.sample_rate, new_freq=16000)
+        if self.hparams.sample_rate != 16000:
+            audio_16_khz = torchaudio.functional.resample(audio_input, orig_freq=self.hparams.sample_rate, new_freq=16000)
+            audio_hat_16khz = torchaudio.functional.resample(audio_hat, orig_freq=self.hparams.sample_rate, new_freq=16000)
+        else:
+            audio_16_khz = audio_input
+            audio_hat_16khz = audio_hat
 
         if self.hparams.evaluate_periodicty:
             from metrics.periodicity import calculate_periodicity_metrics

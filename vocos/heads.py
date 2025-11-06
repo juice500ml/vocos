@@ -35,11 +35,13 @@ class ISTFTHead(FourierHead):
         padding (str, optional): Type of padding. Options are "center" or "same". Defaults to "same".
     """
 
-    def __init__(self, dim: int, n_fft: int, hop_length: int, padding: str = "same"):
+    def __init__(self, dim: int, n_fft: int, hop_length: int, pad_length: Optional[int] = None, padding: str = "same"):
         super().__init__()
         out_dim = n_fft + 2
+        if pad_length is None:
+            pad_length = (n_fft - hop_length) // 2
         self.out = torch.nn.Linear(dim, out_dim)
-        self.istft = ISTFT(n_fft=n_fft, hop_length=hop_length, win_length=n_fft, padding=padding)
+        self.istft = ISTFT(n_fft=n_fft, hop_length=hop_length, win_length=n_fft, pad_length=pad_length, padding=padding)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

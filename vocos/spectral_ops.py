@@ -19,7 +19,7 @@ class ISTFT(nn.Module):
         padding (str, optional): Type of padding. Options are "center" or "same". Defaults to "same".
     """
 
-    def __init__(self, n_fft: int, hop_length: int, win_length: int, padding: str = "same"):
+    def __init__(self, n_fft: int, hop_length: int, win_length: int, pad_length: int, padding: str = "same"):
         super().__init__()
         if padding not in ["center", "same"]:
             raise ValueError("Padding must be 'center' or 'same'.")
@@ -27,6 +27,7 @@ class ISTFT(nn.Module):
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.win_length = win_length
+        self.pad_length = pad_length
         window = torch.hann_window(win_length)
         self.register_buffer("window", window)
 
@@ -44,10 +45,6 @@ class ISTFT(nn.Module):
         if self.padding == "center":
             # Fallback to pytorch native implementation
             return torch.istft(spec, self.n_fft, self.hop_length, self.win_length, self.window, center=True)
-        elif self.padding == "same":
-            pad = (self.win_length - self.hop_length) // 2
-        else:
-            raise ValueError("Padding must be 'center' or 'same'.")
 
         assert spec.dim() == 3, "Expected a 3D tensor as input"
         B, N, T = spec.shape
@@ -60,13 +57,13 @@ class ISTFT(nn.Module):
         output_size = (T - 1) * self.hop_length + self.win_length
         y = torch.nn.functional.fold(
             ifft, output_size=(1, output_size), kernel_size=(1, self.win_length), stride=(1, self.hop_length),
-        )[:, 0, 0, pad:-pad]
+        )[:, 0, 0, self.pad_length:-self.pad_length]
 
         # Window envelope
         window_sq = self.window.square().expand(1, T, -1).transpose(1, 2)
         window_envelope = torch.nn.functional.fold(
             window_sq, output_size=(1, output_size), kernel_size=(1, self.win_length), stride=(1, self.hop_length),
-        ).squeeze()[pad:-pad]
+        ).squeeze()[self.pad_length:-self.pad_length]
 
         # Normalize
         assert (window_envelope > 1e-11).all()

@@ -3,7 +3,8 @@ from typing import List
 import torch
 import torchaudio
 from encodec import EncodecModel
-from torch import nn
+from transformers import Wav2Vec2FeatureExtractor, AutoModel
+from torch import nn, no_grad
 
 from vocos.modules import safe_log
 
@@ -47,6 +48,28 @@ class MelSpectrogramFeatures(FeatureExtractor):
         mel = self.mel_spec(audio)
         features = safe_log(mel)
         return features
+
+
+class SSLFeatures(FeatureExtractor):
+    def __init__(
+        self,
+        ssl_model: str = "microsoft/wavlm-large",
+        layer: int = -1,
+    ):
+        super().__init__()
+        self.model = AutoModel.from_pretrained(ssl_model)
+        self.processor = Wav2Vec2FeatureExtractor.from_pretrained(ssl_model)
+        self.layer = layer
+
+    def forward(self, audio: torch.Tensor, **kwargs):
+        x = self.processor(raw_speech=audio.cpu().numpy(), sampling_rate=16000, padding=True, return_tensors="pt")
+        with no_grad():
+            outputs = self.model(**{k: t.to(audio.device) for k, t in x.items()})
+        if self.layer == -1:
+            return outputs.last_hidden_state.detach().transpose(1, 2)
+        else:
+            outputs = model(output_hidden_states=True, **{k: t.to(args.device) for k, t in x.items()})
+            return outputs.hidden_states[self.layer].detach().transpose(1, 2)
 
 
 class EncodecFeatures(FeatureExtractor):

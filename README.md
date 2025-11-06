@@ -8,6 +8,12 @@ Adversarial Network (GAN) objective, Vocos can generate waveforms in a single fo
 GAN-based vocoders, Vocos does not model audio samples in the time domain. Instead, it generates spectral
 coefficients, facilitating rapid audio reconstruction through inverse Fourier transform.
 
+## Modification from the original vocos training settings
+- We use wavlm-large as the feature extractor
+- We use only dev-clean for the validation set.
+- We modernize pip requirements and refactor minor visualization code.
+- For more details, see configs/vocos-ssl.yaml
+
 ## Installation
 
 To use Vocos only in inference mode, install it using:

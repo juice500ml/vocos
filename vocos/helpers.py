@@ -17,9 +17,9 @@ def save_figure_to_numpy(fig: plt.Figure) -> np.ndarray:
     Returns:
         ndarray: Numpy array representing the figure.
     """
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
+    fig.canvas.draw()
+    data = np.asarray(fig.canvas.buffer_rgba())[..., :3].copy()
+    return (255 * (data / np.max(data))).astype(np.uint8)
 
 
 def plot_spectrogram_to_numpy(spectrogram: np.ndarray) -> np.ndarray:
@@ -40,9 +40,8 @@ def plot_spectrogram_to_numpy(spectrogram: np.ndarray) -> np.ndarray:
     plt.ylabel("Channels")
     plt.tight_layout()
 
-    fig.canvas.draw()
     data = save_figure_to_numpy(fig)
-    plt.close()
+    plt.close(fig)
     return data
 
 
