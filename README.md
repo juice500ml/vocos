@@ -9,7 +9,8 @@ GAN-based vocoders, Vocos does not model audio samples in the time domain. Inste
 coefficients, facilitating rapid audio reconstruction through inverse Fourier transform.
 
 ## Modification from the original vocos training settings
-- We use wavlm-large as the feature extractor
+- We use wavlm-large as the feature extractor.
+- Increase batch size and learning rate by 8 times, decrease the number of iterations by 8 times.
 - We use only dev-clean for the validation set.
 - We modernize pip requirements and refactor minor visualization code.
 - For more details, see configs/vocos-ssl.yaml

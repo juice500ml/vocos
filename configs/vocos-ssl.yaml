@@ -8,21 +8,21 @@ data:
       filelist_path: ???
       sampling_rate: 16000
       num_samples: 16400
-      batch_size: 16
+      batch_size: 32
       num_workers: 8
 
     val_params:
       filelist_path: ???
       sampling_rate: 16000
       num_samples: 16400
-      batch_size: 16
+      batch_size: 32
       num_workers: 8
 
 model:
   class_path: vocos.experiment.VocosExp
   init_args:
     sample_rate: 16000
-    initial_learning_rate: 5e-4
+    initial_learning_rate: 4e-3
     mel_loss_coeff: 45
     mrd_loss_coeff: 0.1
     num_warmup_steps: 0 # Optimizers warmup steps
@@ -76,10 +76,10 @@ trainer:
 
   # Lightning calculates max_steps across all optimizer steps (rather than number of batches)
   # This equals to 1M steps per generator and 1M per discriminator
-  max_steps: 2000000
+  max_steps: 250000
   # You might want to limit val batches when evaluating all the metrics, as they are time-consuming
   limit_val_batches: 100
   accelerator: gpu
   strategy: ddp
-  devices: [0]
+  devices: [0,1,2,3]
   log_every_n_steps: 100
