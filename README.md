@@ -13,7 +13,16 @@ coefficients, facilitating rapid audio reconstruction through inverse Fourier tr
 - Increase batch size and learning rate by 8 times, decrease the number of iterations by 8 times.
 - We use only dev-clean for the validation set.
 - We modernize pip requirements and refactor minor visualization code.
-- For more details, see configs/vocos-ssl.yaml
+- For more details, see configs/vocos-ssl.yaml and configs/vocos-ssl-cached.yaml
+```bash
+# Caching SSL features (required for vocos-ssl-cached)
+python3 dump.py filelist.train ./cache/libritts/train --device cuda
+# Training
+CUDA_VISIBLE_DEVICES=0,1,2,3 python train.py -c configs/vocos-ssl.yaml \
+  --trainer.logger.init_args.name=... \
+  --data.init_args.train_params.filelist_path=... \
+  --data.init_args.val_params.filelist_path=...
+```
 
 ## Installation
 

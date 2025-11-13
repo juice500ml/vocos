@@ -7,7 +7,7 @@ import torchaudio
 import transformers
 
 from vocos.discriminators import MultiPeriodDiscriminator, MultiResolutionDiscriminator
-from vocos.feature_extractors import FeatureExtractor
+from vocos.feature_extractors import FeatureExtractor, CachedFeatures
 from vocos.heads import FourierHead
 from vocos.helpers import plot_spectrogram_to_numpy
 from vocos.loss import DiscriminatorLoss, GeneratorLoss, FeatureMatchingLoss, MelSpecReconstructionLoss
@@ -94,19 +94,24 @@ class VocosExp(pl.LightningModule):
             [{"scheduler": scheduler_disc, "interval": "step"}, {"scheduler": scheduler_gen, "interval": "step"}],
         )
 
-    def forward(self, audio_input, **kwargs):
-        features = self.feature_extractor(audio_input, **kwargs)
+    def forward(self, batch_dict, **kwargs):
+        # Both VocosDataset and VocosCacheDataset return dicts
+        # If cache_path is present, use cached features; otherwise extract from audio
+        if isinstance(self.feature_extractor, CachedFeatures):
+            features = self.feature_extractor(batch_dict, **kwargs)
+        else:
+            features = self.feature_extractor(batch_dict["audio"], **kwargs)
         x = self.backbone(features, **kwargs)
         audio_output = self.head(x)
         return audio_output
 
     def training_step(self, batch, batch_idx, optimizer_idx, **kwargs):
-        audio_input = batch
+        audio_input = batch["audio"]
 
         # train discriminator
         if optimizer_idx == 0 and self.train_discriminator:
             with torch.no_grad():
-                audio_hat = self(audio_input, **kwargs)
+                audio_hat = self(batch, **kwargs)
 
             real_score_mp, gen_score_mp, _, _ = self.multiperioddisc(y=audio_input, y_hat=audio_hat, **kwargs,)
             real_score_mrd, gen_score_mrd, _, _ = self.multiresddisc(y=audio_input, y_hat=audio_hat, **kwargs,)
@@ -127,7 +132,7 @@ class VocosExp(pl.LightningModule):
 
         # train generator
         if optimizer_idx == 1:
-            audio_hat = self(audio_input, **kwargs)
+            audio_hat = self(batch, **kwargs)
             if self.train_discriminator:
                 _, gen_score_mp, fmap_rs_mp, fmap_gs_mp = self.multiperioddisc(
                     y=audio_input, y_hat=audio_hat, **kwargs,
@@ -195,8 +200,8 @@ class VocosExp(pl.LightningModule):
                 self.utmos_model = UTMOSScore(device=self.device)
 
     def validation_step(self, batch, batch_idx, **kwargs):
-        audio_input = batch
-        audio_hat = self(audio_input, **kwargs)
+        audio_input = batch["audio"]
+        audio_hat = self(batch, **kwargs)
 
         if self.hparams.sample_rate != 16000:
             audio_16_khz = torchaudio.functional.resample(audio_input, orig_freq=self.hparams.sample_rate, new_freq=16000)
