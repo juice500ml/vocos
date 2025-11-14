@@ -55,24 +55,37 @@ class SSLFeatures(FeatureExtractor):
         self,
         ssl_model: str = "microsoft/wavlm-large",
         layer: int = -1,
+        normalize: bool = False,
     ):
         super().__init__()
         self.model = AutoModel.from_pretrained(ssl_model)
         self.processor = Wav2Vec2FeatureExtractor.from_pretrained(ssl_model)
         self.layer = layer
+        self.normalize = normalize
 
     def forward(self, audio: torch.Tensor, **kwargs):
         x = self.processor(raw_speech=audio.cpu().numpy(), sampling_rate=16000, padding=True, return_tensors="pt")
-        with no_grad():
-            outputs = self.model(**{k: t.to(audio.device) for k, t in x.items()})
         if self.layer == -1:
-            return outputs.last_hidden_state.detach().transpose(1, 2)
+            with no_grad():
+                outputs = self.model(**{k: t.to(audio.device) for k, t in x.items()})
+                feats = outputs.last_hidden_state.detach()
         else:
-            outputs = self.model(output_hidden_states=True, **{k: t.to(audio.device) for k, t in x.items()})
-            return outputs.hidden_states[self.layer].detach().transpose(1, 2)
+            with no_grad():
+                outputs = self.model(output_hidden_states=True, **{k: t.to(audio.device) for k, t in x.items()})
+                feats = outputs.hidden_states[self.layer].detach()
+
+        # Transpose from (B, L, C) to (B, C, L)
+        feats = feats.transpose(1, 2)
+        if self.normalize:
+            feats = feats / feats.norm(dim=1, keepdim=True)
+        return feats
 
 
 class CachedFeatures(FeatureExtractor):
+    def __init__(self, normalize: bool = False):
+        super().__init__()
+        self.normalize = normalize
+
     def forward(self, batch_dict: dict, **kwargs):
         """
         Load cached features from disk based on cache_path and indices.
@@ -108,6 +121,8 @@ class CachedFeatures(FeatureExtractor):
         # Stack into batch: (batch_size, hidden_dim, seq_len)
         device = batch_dict["audio"].device
         features = torch.stack(features_list, dim=0).to(device)
+        if self.normalize:
+            features = features / features.norm(dim=1, keepdim=True)
         return features
 
 

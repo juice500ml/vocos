@@ -12,7 +12,7 @@ data:
       window_size: 400
       num_samples: 50
       batch_size: 128
-      num_workers: 8
+      num_workers: 32
 
     val_params:
       dataset_type: vocos_cache
@@ -22,7 +22,7 @@ data:
       window_size: 400
       num_samples: 50
       batch_size: 128
-      num_workers: 8
+      num_workers: 32
 
 model:
   class_path: vocos.experiment.VocosExp
@@ -41,6 +41,8 @@ model:
 
     feature_extractor:
       class_path: vocos.feature_extractors.CachedFeatures
+      init_args:
+        normalize: true
 
     backbone:
       class_path: vocos.models.VocosBackbone
