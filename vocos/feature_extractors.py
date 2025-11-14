@@ -68,17 +68,17 @@ class SSLFeatures(FeatureExtractor):
         if self.layer == -1:
             with no_grad():
                 outputs = self.model(**{k: t.to(audio.device) for k, t in x.items()})
-                feats = outputs.last_hidden_state.detach()
+                features = outputs.last_hidden_state.detach()
         else:
             with no_grad():
                 outputs = self.model(output_hidden_states=True, **{k: t.to(audio.device) for k, t in x.items()})
-                feats = outputs.hidden_states[self.layer].detach()
+                features = outputs.hidden_states[self.layer].detach()
 
-        # Transpose from (B, L, C) to (B, C, L)
-        feats = feats.transpose(1, 2)
         if self.normalize:
-            feats = feats / feats.norm(dim=1, keepdim=True)
-        return feats
+            features = features / features.norm(dim=-1, keepdim=True)
+        # Transpose from (B, L, C) to (B, C, L)
+        features = features.transpose(-2, -1)
+        return features
 
 
 class CachedFeatures(FeatureExtractor):
@@ -86,43 +86,11 @@ class CachedFeatures(FeatureExtractor):
         super().__init__()
         self.normalize = normalize
 
-    def forward(self, batch_dict: dict, **kwargs):
-        """
-        Load cached features from disk based on cache_path and indices.
-
-        Args:
-            batch_dict: Dictionary containing:
-                - "cache_path": str or list of str (full paths to cached feature files)
-                - "start_index": int or list of int (start indices)
-                - "end_index": int or list of int (end indices)
-
-        Returns:
-            Tensor: Features of shape (B, C, L) where B is batch size,
-                   C is hidden_dim, L is sequence length
-        """
-        cache_paths = batch_dict.get("cache_path")
-        start_indices = batch_dict.get("start_index")
-        end_indices = batch_dict.get("end_index")
-
-        # Handle single sample vs batched
-        if isinstance(cache_paths, str):
-            cache_paths = [cache_paths]
-            start_indices = [start_indices]
-            end_indices = [end_indices]
-
-        features_list = []
-        for cache_path, start_idx, end_idx in zip(cache_paths, start_indices, end_indices):
-            # Load cached features: shape (seq_len, hidden_dim)
-            feats = torch.load(cache_path, map_location="cpu")
-            # Slice and transpose: (hidden_dim, seq_len_slice)
-            feats = feats[start_idx:end_idx, :].transpose(0, 1)
-            features_list.append(feats)
-
-        # Stack into batch: (batch_size, hidden_dim, seq_len)
-        device = batch_dict["audio"].device
-        features = torch.stack(features_list, dim=0).to(device)
+    def forward(self, features: torch.Tensor, **kwargs):
         if self.normalize:
-            features = features / features.norm(dim=1, keepdim=True)
+            features = features / features.norm(dim=-1, keepdim=True)
+        # Transpose from (B, L, C) to (B, C, L)
+        features = features.transpose(-2, -1)
         return features
 
 

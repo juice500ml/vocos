@@ -98,7 +98,7 @@ class VocosExp(pl.LightningModule):
         # Both VocosDataset and VocosCacheDataset return dicts
         # If cache_path is present, use cached features; otherwise extract from audio
         if isinstance(self.feature_extractor, CachedFeatures):
-            features = self.feature_extractor(batch_dict, **kwargs)
+            features = self.feature_extractor(batch_dict["feature"], **kwargs)
         else:
             features = self.feature_extractor(batch_dict["audio"], **kwargs)
         x = self.backbone(features, **kwargs)

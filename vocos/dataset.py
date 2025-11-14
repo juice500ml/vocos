@@ -108,7 +108,7 @@ class VocosCacheDataset(Dataset):
             if row["length"] >= self.num_samples:
                 self.filelist.append(cache_id)
 
-        print(f"VocosCacheDataset: Filtered {len(self.filelist)} files from {len(self.meta)} (required length: >= {self.num_samples})")
+        print(f"VocosCacheDataset: Filtered {len(self.filelist)} / Original {len(self.meta)} (required length: >= {self.num_samples})")
 
     def __len__(self) -> int:
         return len(self.filelist)
@@ -141,10 +141,10 @@ class VocosCacheDataset(Dataset):
         audio = waveform[0][audio_start:audio_end]
 
         cache_path = Path(self.cache_dir) / f"{cache_id}.pt"
+        feats = torch.load(cache_path, map_location="cpu")
+        feats = feats[start_index:end_index, :]
 
         return {
             "audio": audio,
-            "cache_path": str(cache_path),
-            "start_index": start_index,
-            "end_index": end_index,
+            "feature": feats,
         }
