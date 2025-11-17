@@ -21,8 +21,8 @@ data:
       stride_size: 320
       window_size: 400
       num_samples: 50
-      batch_size: 128
-      num_workers: 32
+      batch_size: 16
+      num_workers: 4
 
 model:
   class_path: vocos.experiment.VocosExp
@@ -42,7 +42,7 @@ model:
     feature_extractor:
       class_path: vocos.feature_extractors.CachedFeatures
       init_args:
-        normalize: true
+        normalize: false
 
     backbone:
       class_path: vocos.models.VocosBackbone
@@ -83,7 +83,7 @@ trainer:
   # This equals to 1M steps per generator and 1M per discriminator
   max_steps: 62500
   # You might want to limit val batches when evaluating all the metrics, as they are time-consuming
-  limit_val_batches: 100
+  limit_val_batches: 128
   accelerator: gpu
   strategy: ddp
   devices: [0,1,2,3]
