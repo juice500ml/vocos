@@ -65,16 +65,16 @@ class Vocos(nn.Module):
         Class method to create a new Vocos model instance from a pre-trained model stored in the Hugging Face model hub.
         """
         config_path = hf_hub_download(repo_id=repo_id, filename="config.yaml", revision=revision)
-        model_path = hf_hub_download(repo_id=repo_id, filename="pytorch_model.bin", revision=revision)
+        model_path = hf_hub_download(repo_id=repo_id, filename="last.ckpt", revision=revision)
         model = cls.from_hparams(config_path)
-        state_dict = torch.load(model_path, map_location="cpu")["state_dict"]
+        state_dict = torch.load(model_path, map_location="cpu", weights_only=True)["state_dict"]
         if isinstance(model.feature_extractor, EncodecFeatures):
             encodec_parameters = {
                 "feature_extractor.encodec." + key: value
                 for key, value in model.feature_extractor.encodec.state_dict().items()
             }
             state_dict.update(encodec_parameters)
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict=False)
         model.eval()
         return model
 
