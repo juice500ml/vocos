@@ -50,6 +50,28 @@ class MelSpectrogramFeatures(FeatureExtractor):
         return features
 
 
+class MFCCFeatures(FeatureExtractor):
+    def __init__(self, sample_rate=24000, n_mfcc=40, log_mels=False, n_fft=1024, hop_length=256, n_mels=100, padding="center"):
+        super().__init__()
+        if padding not in ["center", "same"]:
+            raise ValueError("Padding must be 'center' or 'same'.")
+        self.padding = padding
+        self.mfcc = torchaudio.transforms.MFCC(
+            sample_rate=sample_rate,
+            n_mfcc=n_mfcc,
+            log_mels=log_mels,
+            melkwargs={"n_fft": n_fft, "hop_length": hop_length, "n_mels": n_mels},
+        )
+        self.win_length = n_fft
+        self.hop_length = hop_length
+
+    def forward(self, audio, **kwargs):
+        if self.padding == "same":
+            pad = self.win_length - self.hop_length
+            audio = torch.nn.functional.pad(audio, (pad // 2, pad // 2), mode="reflect")
+        return safe_log(self.mfcc(audio))
+
+
 class SSLFeatures(FeatureExtractor):
     def __init__(
         self,
